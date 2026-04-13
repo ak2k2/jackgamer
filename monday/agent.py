@@ -91,6 +91,7 @@ class JackAgent:
                 raise
             else:
                 return {"result": self.sbx.func_callable_map[name](**(args))}
+        except Exception as e:
             return {"result": f"error: {type(e).__name__}: {e}"}
 
     def generate_response(self):
