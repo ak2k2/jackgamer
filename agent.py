@@ -14,12 +14,14 @@ import logging
 import mimetypes
 import subprocess
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S"
+)
 
 
 client = genai.Client()
@@ -124,8 +126,16 @@ TAKE_ACTION = {
         "properties": {
             "action": {
                 "type": "string",
-                "enum": ["ACTION1", "ACTION2", "ACTION3", "ACTION4",
-                         "ACTION5", "ACTION6", "ACTION7", "RESET"],
+                "enum": [
+                    "ACTION1",
+                    "ACTION2",
+                    "ACTION3",
+                    "ACTION4",
+                    "ACTION5",
+                    "ACTION6",
+                    "ACTION7",
+                    "RESET",
+                ],
                 "description": "The action to take.",
             },
             "x": {
@@ -155,8 +165,7 @@ TOOLS = [RUN_COMMAND, VIEW_FILE, TAKE_ACTION, RENDER_BOARD]
 CONFIG = types.GenerateContentConfig(
     system_instruction=SYSTEM_PROMPT,
     tools=[types.Tool(function_declarations=TOOLS)],
-    automatic_function_calling=types.AutomaticFunctionCallingConfig(
-        disable=True),
+    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     temperature=1.0,
     media_resolution=types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
     candidate_count=1,
@@ -176,7 +185,9 @@ def to_dict(obs):
         "score": obs.levels_completed,
         "win_levels": obs.win_levels,
         "grid": [layer.tolist() for layer in obs.frame],
-        "available_actions": [GameAction.from_id(a).name for a in obs.available_actions],
+        "available_actions": [
+            GameAction.from_id(a).name for a in obs.available_actions
+        ],
     }
 
 
@@ -188,10 +199,8 @@ def _diff_grids(old, new):
     """diff of changes with hints when stuck."""
     if not old or not new:
         return ""
-    old_g = old[-1] if isinstance(old[0],
-                                  list) and isinstance(old[0][0], list) else old
-    new_g = new[-1] if isinstance(new[0],
-                                  list) and isinstance(new[0][0], list) else new
+    old_g = old[-1] if isinstance(old[0], list) and isinstance(old[0][0], list) else old
+    new_g = new[-1] if isinstance(new[0], list) and isinstance(new[0][0], list) else new
     changes = []
     for r in range(min(len(old_g), len(new_g))):
         for c in range(min(len(old_g[r]), len(new_g[r]))):
@@ -222,15 +231,26 @@ def _get_tried_actions(grid):
 def _record_action(grid, action_name, changed, diff):
     h = _hash_grid(grid)
     state_action_memory.setdefault(h, {})[action_name] = {
-        "changed": changed, "diff": diff}
+        "changed": changed,
+        "diff": diff,
+    }
 
 
 def _sync_state_to_sandbox(obs):
     state_json = json.dumps(obs)
     subprocess.run(
-        ["docker", "exec", "-w", "/home/agent", "sandbox",
-         "bash", "-c", f"cat > state.json << 'STATEEOF'\n{state_json}\nSTATEEOF"],
-        capture_output=True, timeout=10,
+        [
+            "docker",
+            "exec",
+            "-w",
+            "/home/agent",
+            "sandbox",
+            "bash",
+            "-c",
+            f"cat > state.json << 'STATEEOF'\n{state_json}\nSTATEEOF",
+        ],
+        capture_output=True,
+        timeout=10,
     )
 
 
@@ -263,9 +283,18 @@ def find_color(grid, val):
     return [(r, c) for r in range(len(grid)) for c in range(len(grid[r])) if grid[r][c] == val]
 '''
     subprocess.run(
-        ["docker", "exec", "-w", "/home/agent", "sandbox",
-         "bash", "-c", f"cat > helpers.py << 'HELPEOF'\n{helpers}\nHELPEOF"],
-        capture_output=True, timeout=10,
+        [
+            "docker",
+            "exec",
+            "-w",
+            "/home/agent",
+            "sandbox",
+            "bash",
+            "-c",
+            f"cat > helpers.py << 'HELPEOF'\n{helpers}\nHELPEOF",
+        ],
+        capture_output=True,
+        timeout=10,
     )
 
 
@@ -288,23 +317,36 @@ def step(args):
         return obs
 
     ga = GameAction.from_name(action_name)
-    data = {"x": int(args["x"]), "y": int(args["y"])
-            } if action_name == "ACTION6" else None
+    data = (
+        {"x": int(args["x"]), "y": int(args["y"])} if action_name == "ACTION6" else None
+    )
     obs = to_dict(env.step(ga, data=data))
     current_obs = obs
     _sync_state_to_sandbox(obs)
     return obs
 
 
-VALID_ACTIONS = {"ACTION1", "ACTION2", "ACTION3", "ACTION4",
-                 "ACTION5", "ACTION6", "ACTION7", "RESET"}
+VALID_ACTIONS = {
+    "ACTION1",
+    "ACTION2",
+    "ACTION3",
+    "ACTION4",
+    "ACTION5",
+    "ACTION6",
+    "ACTION7",
+    "RESET",
+}
 
 
 def validate_action(args):
     action = args.get("action")
     if action not in VALID_ACTIONS:
         return f"invalid action: {action}"
-    if action != "RESET" and current_obs and action not in current_obs.get("available_actions", []):
+    if (
+        action != "RESET"
+        and current_obs
+        and action not in current_obs.get("available_actions", [])
+    ):
         return f"action {action} not available. available: {current_obs['available_actions']}"
     if action == "ACTION6":
         x, y = args.get("x"), args.get("y")
@@ -327,9 +369,19 @@ def execute_tool(name, args):
 def _execute_tool(name, args):
     if name == "run_command":
         result = subprocess.run(
-            ["docker", "exec", "-w", "/home/agent",
-                "sandbox", "bash", "-c", args["command"]],
-            capture_output=True, text=True, timeout=60,
+            [
+                "docker",
+                "exec",
+                "-w",
+                "/home/agent",
+                "sandbox",
+                "bash",
+                "-c",
+                args["command"],
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         return {"result": (result.stdout + result.stderr).strip()}
 
@@ -337,7 +389,8 @@ def _execute_tool(name, args):
         path = args["path"]
         result = subprocess.run(
             ["docker", "exec", "sandbox", "cat", path],
-            capture_output=True, timeout=30,
+            capture_output=True,
+            timeout=30,
         )
         if result.returncode != 0:
             return {"result": f"error: {result.stderr.decode().strip()}"}
@@ -387,11 +440,13 @@ def _execute_tool(name, args):
 def play(game_id, max_actions=500, mode="normal"):
     global env, current_obs
 
-    r = subprocess.run(["docker", "inspect", "-f", "{{.State.Running}}", "sandbox"],
-                       capture_output=True, text=True)
+    r = subprocess.run(
+        ["docker", "inspect", "-f", "{{.State.Running}}", "sandbox"],
+        capture_output=True,
+        text=True,
+    )
     if r.returncode != 0 or "true" not in r.stdout.lower():
-        raise RuntimeError(
-            "sandbox container not running. run: docker compose up -d")
+        raise RuntimeError("sandbox container not running. run: docker compose up -d")
 
     arcade = arc_agi.Arcade(operation_mode=OperationMode(mode))
     card_id = arcade.open_scorecard(tags=["agent"])
@@ -403,8 +458,13 @@ def play(game_id, max_actions=500, mode="normal"):
     _sync_state_to_sandbox(current_obs)
     _seed_sandbox_helpers()
     state_action_memory.clear()
-    logger.info("game=%s  state=%s  score=%d/%d", game_id,
-                current_obs["state"], current_obs["score"], current_obs["win_levels"])
+    logger.info(
+        "game=%s  state=%s  score=%d/%d",
+        game_id,
+        current_obs["state"],
+        current_obs["score"],
+        current_obs["win_levels"],
+    )
 
     obs_summary = {k: v for k, v in current_obs.items() if k != "grid"}
     prompt = (
@@ -418,8 +478,12 @@ def play(game_id, max_actions=500, mode="normal"):
     action_count = 0
     max_turns = max_actions * 10
     turn_count = 0
-    usage = {"prompt_tokens": 0, "prompt_tokens_total": 0,
-             "output_tokens": 0, "thinking_tokens": 0}
+    usage = {
+        "prompt_tokens": 0,
+        "prompt_tokens_total": 0,
+        "output_tokens": 0,
+        "thinking_tokens": 0,
+    }
 
     while True:
         turn_count += 1
@@ -429,7 +493,9 @@ def play(game_id, max_actions=500, mode="normal"):
 
         logger.info("calling gemini (%d actions so far)...", action_count)
         response = client.models.generate_content(
-            model=MODEL, contents=contents, config=CONFIG,
+            model=MODEL,
+            contents=contents,
+            config=CONFIG,
         )
 
         m = response.usage_metadata
@@ -458,11 +524,20 @@ def play(game_id, max_actions=500, mode="normal"):
 
             if fc.name == "take_action":
                 action_count += 1
-                logger.info("[%d] %s  state=%s  score=%d/%d", action_count, fc.args.get(
-                    "action"), current_obs["state"], current_obs["score"], current_obs["win_levels"])
+                logger.info(
+                    "[%d] %s  state=%s  score=%d/%d",
+                    action_count,
+                    fc.args.get("action"),
+                    current_obs["state"],
+                    current_obs["score"],
+                    current_obs["win_levels"],
+                )
             else:
-                preview = output["result"] if isinstance(
-                    output["result"], str) else str(output["result"])
+                preview = (
+                    output["result"]
+                    if isinstance(output["result"], str)
+                    else str(output["result"])
+                )
                 logger.info("%s: %s", fc.name, preview[:200])
 
             fr_kwargs = {
@@ -471,17 +546,18 @@ def play(game_id, max_actions=500, mode="normal"):
                 "id": fc.id,
             }
             if "_bytes" in output:
-                fr_kwargs["parts"] = [types.FunctionResponsePart(
-                    inline_data=types.FunctionResponseBlob(
-                        mime_type=output["_mime"],
-                        display_name="board.png",
-                        data=output["_bytes"],
+                fr_kwargs["parts"] = [
+                    types.FunctionResponsePart(
+                        inline_data=types.FunctionResponseBlob(
+                            mime_type=output["_mime"],
+                            display_name="board.png",
+                            data=output["_bytes"],
+                        )
                     )
-                )]
+                ]
 
             result_parts.append(
-                types.Part(
-                    function_response=types.FunctionResponse(**fr_kwargs))
+                types.Part(function_response=types.FunctionResponse(**fr_kwargs))
             )
 
         contents.append(types.Content(role="user", parts=result_parts))
@@ -505,7 +581,8 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--game", default="ft09")
     p.add_argument("--max-actions", type=int, default=500)
-    p.add_argument("--mode", default="normal",
-                   choices=["normal", "online", "competition"])
+    p.add_argument(
+        "--mode", default="normal", choices=["normal", "online", "competition"]
+    )
     args = p.parse_args()
     play(args.game, args.max_actions, args.mode)

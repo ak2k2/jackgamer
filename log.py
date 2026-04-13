@@ -19,6 +19,7 @@ def start_server(port=8000):
         def do_GET(self):
             self.path = "/log.html"
             return super().do_GET()
+
         def log_message(self, *args):
             pass
 
@@ -72,8 +73,18 @@ def _render_grid(grid_layers):
 
 
 PRICING = {
-    "gemini-3-flash-preview": {"input": 0.50, "input_200k": 0.50, "output": 3.00, "output_200k": 3.00},
-    "gemini-3.1-pro-preview": {"input": 2.00, "input_200k": 4.00, "output": 12.00, "output_200k": 18.00},
+    "gemini-3-flash-preview": {
+        "input": 0.50,
+        "input_200k": 0.50,
+        "output": 3.00,
+        "output_200k": 3.00,
+    },
+    "gemini-3.1-pro-preview": {
+        "input": 2.00,
+        "input_200k": 4.00,
+        "output": 12.00,
+        "output_200k": 18.00,
+    },
 }
 
 
@@ -89,14 +100,14 @@ def write_log(contents, path="log.html", usage=None, model=None, **_):
             if part.text:
                 parts_html.append(
                     f'<div class="msg {role}"><b>{role} / text</b>'
-                    f'<pre>{_esc(part.text)}</pre></div>'
+                    f"<pre>{_esc(part.text)}</pre></div>"
                 )
 
             elif part.function_call:
                 fc = part.function_call
                 parts_html.append(
                     f'<div class="msg call"><b>model / function_call: {_esc(fc.name)} (id={fc.id})</b>'
-                    f'<pre>{_esc(json.dumps(dict(fc.args), indent=2))}</pre></div>'
+                    f"<pre>{_esc(json.dumps(dict(fc.args), indent=2))}</pre></div>"
                 )
 
             elif part.function_response:
@@ -107,7 +118,7 @@ def write_log(contents, path="log.html", usage=None, model=None, **_):
                     result_str = result_str[:5000] + "\n... (truncated)"
 
                 block = f'<div class="msg response"><b>user / function_response: {_esc(fr.name)}</b>'
-                block += f'<pre>{_esc(result_str)}</pre>'
+                block += f"<pre>{_esc(result_str)}</pre>"
 
                 # render inline image if function response has multimodal parts
                 if fr.parts:
@@ -117,7 +128,7 @@ def write_log(contents, path="log.html", usage=None, model=None, **_):
                             b64 = base64.b64encode(frp.inline_data.data).decode()
                             block += f'<img src="data:{mime};base64,{b64}" style="max-width:256px;image-rendering:pixelated">'
 
-                block += '</div>'
+                block += "</div>"
                 parts_html.append(block)
 
             elif part.inline_data:
@@ -132,14 +143,16 @@ def write_log(contents, path="log.html", usage=None, model=None, **_):
                 else:
                     parts_html.append(
                         f'<div class="msg inline"><b>user / inline_data ({mime}, {size} bytes)</b>'
-                        f'<pre>[binary data]</pre></div>'
+                        f"<pre>[binary data]</pre></div>"
                     )
 
     # build usage bar
-    prompt_t = usage.get("prompt_tokens", 0)          # current context size
-    prompt_total = usage.get("prompt_tokens_total", 0) # cumulative input across all calls
-    output_t = usage.get("output_tokens", 0)           # cumulative output
-    thinking_t = usage.get("thinking_tokens", 0)       # cumulative thinking
+    prompt_t = usage.get("prompt_tokens", 0)  # current context size
+    prompt_total = usage.get(
+        "prompt_tokens_total", 0
+    )  # cumulative input across all calls
+    output_t = usage.get("output_tokens", 0)  # cumulative output
+    thinking_t = usage.get("thinking_tokens", 0)  # cumulative thinking
     prices = PRICING.get(model or "", PRICING["gemini-3-flash-preview"])
     in_price = prices["input_200k"] if prompt_t > 200_000 else prices["input"]
     out_price = prices["output_200k"] if prompt_t > 200_000 else prices["output"]
@@ -148,14 +161,16 @@ def write_log(contents, path="log.html", usage=None, model=None, **_):
     cost = cost_in + cost_out
     usage_html = (
         f'<div class="usage">'
-        f'context: {prompt_t:,} / 1,048,576 &nbsp; '
-        f'output: {output_t:,} &nbsp; '
-        f'thinking: {thinking_t:,} &nbsp; '
-        f'~${cost:.4f}'
-        f'</div>'
+        f"context: {prompt_t:,} / 1,048,576 &nbsp; "
+        f"output: {output_t:,} &nbsp; "
+        f"thinking: {thinking_t:,} &nbsp; "
+        f"~${cost:.4f}"
+        f"</div>"
     )
 
-    html = _TEMPLATE.replace("{{USAGE}}", usage_html).replace("{{BODY}}", "\n".join(parts_html))
+    html = _TEMPLATE.replace("{{USAGE}}", usage_html).replace(
+        "{{BODY}}", "\n".join(parts_html)
+    )
     Path(path).write_text(html)
 
 

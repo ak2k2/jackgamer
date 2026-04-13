@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/tools.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/bash.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/edit.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/file.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/write.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/glob.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/grep.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/ls.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/fetch.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/patch.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/view.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/diagnostics.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/tools/sourcegraph.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/agent/tools.go\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/agent/agent-tool.go\")",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  }
+}
