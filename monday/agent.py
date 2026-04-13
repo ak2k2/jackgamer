@@ -80,6 +80,7 @@ class JackAgent:
         self.arc_session: MyArcSession = arc_session
         self.replay_path = str(arc_session.env._recording_filename)
         self._seed_helpers()
+        self._sync_state()
         self.clear()
 
     def _seed_helpers(self):
@@ -127,6 +128,13 @@ def find_color(grid, val):
     return [(r, c) for r in range(len(grid)) for c in range(len(grid[r])) if grid[r][c] == val]
 ''')
 
+    def _sync_state(self):
+        obs = self.arc_session.obs
+        state = obs.model_dump(mode="json")
+        if obs.frame:
+            state["grid"] = obs.frame[-1].tolist()
+        self.sbx.write("/home/agent/state.json", json.dumps(state))
+
     def clear(self):
         self.contents = []
 
@@ -146,10 +154,7 @@ def find_color(grid, val):
                 self.arc_session.do_action_from_name(
                     action_name=action_name, data=data)
                 # sync state + replay to sandbox
-                obs = self.arc_session.obs
-                state = obs.model_dump(mode="json")
-                state["grid"] = obs.frame[-1].tolist()
-                self.sbx.write("/home/agent/state.json", json.dumps(state))
+                self._sync_state()
                 self.sbx.write("/home/agent/replay.jsonl",
                                open(self.replay_path).read())
                 return {"result": (

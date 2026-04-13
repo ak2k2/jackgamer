@@ -48,8 +48,8 @@ Every game has a "solution". The goal is to get to a solution quickly and reliab
 TAKE_ACTION = {
     "name": "take_action",
     "description": (
-        "Submit a game action. Returns state, score, available_actions, a board image, "
-        "a diff of changes, and memory of previously tried actions. "
+        "Submit a game action. Returns state, score, and available_actions. "
+        "Updated grid is written to /home/agent/state.json. "
         "For ACTION6 (click), x and y are required (0-63)."
     ),
     "parameters": {
