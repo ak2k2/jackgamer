@@ -27,9 +27,21 @@ Color palette (0-15):
 You have a Linux sandbox (working dir /home/agent) with Python 3.12, numpy, \
 matplotlib, pillow, and sudo. You can run any command, write scripts, install packages.
 
-Goal: build local and global understanding of the game dynamics. 
+A helpers.py file is pre-loaded with:
+- load_grid() → numpy array of the current 64x64 grid
+- load_obs() → full observation dict
+- render_board() → saves board.png with correct game colors
+- diff_grids(old, new) → list of (row, col, old_val, new_val)
+- color_counts(grid) → {color: count}
+- find_color(grid, val) → [(row, col), ...]
+Example: python3 -c "from helpers import *; render_board()"
 
-Learn agentically from trying strategies and analysing data / results. 
+Use view_image to see any image you create. You cannot see files \
+unless you pass them through view_image.
+
+Goal: build local and global understanding of the game dynamics.
+
+Learn agentically from trying strategies and analysing data / results.
 Every game has a "solution". The goal is to get to a solution quickly and reliably.
 """
 

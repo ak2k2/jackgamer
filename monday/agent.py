@@ -79,7 +79,53 @@ class JackAgent:
         self.sbx: SandboxOrchestrator = sbx
         self.arc_session: MyArcSession = arc_session
         self.replay_path = str(arc_session.env._recording_filename)
+        self._seed_helpers()
         self.clear()
+
+    def _seed_helpers(self):
+        self.sbx.write("/home/agent/helpers.py", '''\
+import json
+import numpy as np
+from PIL import Image
+
+PALETTE = np.array([
+    [0xFF,0xFF,0xFF],[0xCC,0xCC,0xCC],[0x99,0x99,0x99],[0x66,0x66,0x66],
+    [0x33,0x33,0x33],[0x00,0x00,0x00],[0xE5,0x3A,0xA3],[0xFF,0x7B,0xCC],
+    [0xF9,0x3C,0x31],[0x1E,0x93,0xFF],[0x88,0xD8,0xF1],[0xFF,0xDC,0x00],
+    [0xFF,0x85,0x1B],[0x92,0x12,0x31],[0x4F,0xCC,0x30],[0xA3,0x56,0xD6],
+], dtype=np.uint8)
+
+def load_grid():
+    """Load the current grid as a numpy array."""
+    return np.array(json.load(open("state.json"))["grid"])
+
+def load_obs():
+    """Load the full observation."""
+    return json.load(open("state.json"))
+
+def render_board(path="board.png"):
+    """Render current board with correct game colors, save as PNG."""
+    grid = load_grid()
+    rgb = PALETTE[np.clip(grid.astype(np.uint8), 0, 15)]
+    img = Image.fromarray(rgb).resize((512, 512), Image.NEAREST)
+    img.save(path)
+    return path
+
+def diff_grids(old, new):
+    """Return list of (row, col, old_val, new_val) for changed cells."""
+    return [(r, c, old[r][c], new[r][c])
+            for r in range(len(old)) for c in range(len(old[r]))
+            if old[r][c] != new[r][c]]
+
+def color_counts(grid):
+    """Count occurrences of each color value."""
+    from collections import Counter
+    return dict(Counter(int(v) for row in grid for v in row))
+
+def find_color(grid, val):
+    """Return list of (row, col) where grid == val."""
+    return [(r, c) for r in range(len(grid)) for c in range(len(grid[r])) if grid[r][c] == val]
+''')
 
     def clear(self):
         self.contents = []
