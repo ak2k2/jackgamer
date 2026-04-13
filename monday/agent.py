@@ -135,16 +135,17 @@ class JackAgent:
         self.contents.append(model_content)
 
         if not calls:
-            print("did not make a tool call")
-            return
+            return []
 
         result_parts: list[types.Part] = []
+        executed: list[dict] = []
 
         for p in calls:
             fc: types.FunctionCall = p.function_call
 
             output: dict = self.execute_tool(
                 name=fc.name, args=fc.args)
+            executed.append({"name": fc.name, "args": dict(fc.args), "result": output["result"]})
 
             fr_kwargs = {
                 "name": fc.name,
@@ -168,6 +169,7 @@ class JackAgent:
             )
 
         self.contents.append(types.Content(role="user", parts=result_parts))
+        return executed
 
 
 def main():
