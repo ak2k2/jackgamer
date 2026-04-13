@@ -88,7 +88,15 @@ class JackAgent:
             args = args or {}
             if name == TAKE_ACTION["name"]:
                 action_name: str = args.get("action")
-                self.arc_session.do_action_from_name(action_name=action_name)
+                data = None
+                if action_name == "ACTION6":
+                    x, y = args.get("x"), args.get("y")
+                    if x is None or y is None:
+                        return {"result": "error: ACTION6 requires x and y coordinates"}
+                    if not (0 <= int(x) <= 63 and 0 <= int(y) <= 63):
+                        return {"result": f"error: coordinates out of range: x={x}, y={y} (must be 0-63)"}
+                    data = {"x": int(x), "y": int(y)}
+                self.arc_session.do_action_from_name(action_name=action_name, data=data)
                 # sync state + replay to sandbox
                 obs = self.arc_session.obs
                 state = obs.model_dump(mode="json")

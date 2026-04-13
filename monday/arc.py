@@ -16,16 +16,15 @@ class MyArcSession:
         self.last_obs = None
         self.obs = self.env.reset()
 
-    def do_action(self, action: GameAction):
+    def do_action(self, action: GameAction, data: dict | None = None):
         assert action.name in {"ACTION1", "ACTION2", "ACTION3", "ACTION4",
                                "ACTION5", "ACTION6", "ACTION7", "RESET"}
         if action == GameAction.RESET:
             self.reset()
             return
         self.last_obs = self.obs
-        data = {}  # TODO: support click
         self.obs = self.env.step(action, data=data)
 
-    def do_action_from_name(self, action_name: str):
+    def do_action_from_name(self, action_name: str, data: dict | None = None):
         ga = GameAction.from_name(action_name)
-        self.do_action(action=ga)
+        self.do_action(action=ga, data=data)
