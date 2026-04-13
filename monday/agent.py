@@ -73,7 +73,7 @@ def starting_state_prompt(obs: FrameDataRaw) -> str:
 class JackAgent:
     def __init__(self, sbx: SandboxOrchestrator, arc_session: MyArcSession):
         self.client = genai.Client()
-        self.model = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"][0]
+        self.model = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"][1]
         self.contents: list[types.Content] = []
         self.sbx: SandboxOrchestrator = sbx
         self.arc_session: MyArcSession = arc_session
@@ -90,8 +90,10 @@ class JackAgent:
                 action_name: str = args.get("action")
                 self.arc_session.do_action_from_name(action_name=action_name)
                 # sync state + replay to sandbox
-                self.sbx.write("/home/agent/state.json",
-                               self.arc_session.obs.model_dump_json())
+                obs = self.arc_session.obs
+                state = obs.model_dump(mode="json")
+                state["grid"] = obs.frame[-1].tolist()
+                self.sbx.write("/home/agent/state.json", json.dumps(state))
                 self.sbx.write("/home/agent/replay.jsonl",
                                open(self.replay_path).read())
                 return {"result": (
