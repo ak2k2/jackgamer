@@ -72,7 +72,7 @@ def starting_state_prompt(obs: FrameDataRaw) -> str:
 class JackAgent:
     def __init__(self, sbx: SandboxOrchestrator, arc_session: MyArcSession):
         self.client = genai.Client()
-        self.model = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"][1]
+        self.model = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"][0]
         self.contents: list[types.Content] = []
         self.sbx: SandboxOrchestrator = sbx
         self.arc_session: MyArcSession = arc_session
@@ -111,7 +111,7 @@ class JackAgent:
                 media_resolution=types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
                 candidate_count=1,
                 stop_sequences=[],
-                thinking_config=types.ThinkingConfig(thinking_level="high"),
+                thinking_config=types.ThinkingConfig(thinking_level="low"),
             ),
         )
         model_content: types.Content = res.candidates[0].content
@@ -127,7 +127,6 @@ class JackAgent:
         result_parts: list[types.Part] = []
 
         for p in calls:
-            print(f"made {len(calls)} tool calls")
             fc: types.FunctionCall = p.function_call
 
             output: dict = self.execute_tool(
