@@ -115,7 +115,7 @@ class JackAgent:
         for p in calls:
             print(f"made {len(calls)} tool calls")
             fc: types.FunctionCall = p.function_call
-            output: dict = self.sbx.execute_tool_with_timeout(
+            output: dict = self.sbx.execute_tool(
                 name=fc.name, args=fc.args)
 
             fr_kwargs = {

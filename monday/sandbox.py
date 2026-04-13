@@ -4,7 +4,7 @@ import docker
 import io
 import os
 import tarfile
-import subprocess
+
 
 MAX_OUTPUT = 30_000
 DEFAULT_TIMEOUT = 60_000
@@ -96,13 +96,8 @@ class SandboxOrchestrator:
         tar_buf.seek(0)
         self._c.put_archive(os.path.dirname(path), tar_buf.getvalue())
 
-    def execute_tool(self, name: str, args: Optional[dict[str, Any]]):
-        res = self.func_callable_map[name](**args)
-
-    def execute_tool_with_timeout(self, name: str, args: Optional[dict[str, Any]]):
+    def execute_tool(self, name: str, args: Optional[dict[str, Any]] = None):
         try:
-            return self.execute_tool(name, args)
-        except subprocess.TimeoutExpired:
-            return {"result": "error: command timed out"}
+            return {"result": self.func_callable_map[name](**(args or {}))}
         except Exception as e:
             return {"result": f"error: {type(e).__name__}: {e}"}
