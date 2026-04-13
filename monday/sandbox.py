@@ -1,7 +1,10 @@
+from typing import Any, Optional
+
 import docker
 import io
 import os
 import tarfile
+import subprocess
 
 MAX_OUTPUT = 30_000
 DEFAULT_TIMEOUT = 60_000
@@ -10,17 +13,22 @@ DEFAULT_READ_LIMIT = 2000
 MAX_LINE_LENGTH = 2000
 
 
-class DockerSandbox:
-    """Docker Sandbox Orchestrator"""
+class SandboxOrchestrator:
+    """Tool call harness in a container"""
 
     def __init__(self, name: str = "sandbox", workdir: str = "/home/agent"):
-        self.name = name # FKEY: scorecard id
+        self.name = name  # FKEY: scorecard id
         self.workdir = workdir
         self._client = docker.from_env()
         self._client.ping()
         self._c = self._client.containers.get(name)
         self._c.reload()
         self.reset()
+        self.func_callable_map = {
+            "bash": self.bash,
+            "view": self.view,
+            "write": self.write,
+        }
 
     def reset(self):
         self._c.restart(timeout=5)
@@ -34,7 +42,7 @@ class DockerSandbox:
         if len(text) <= MAX_OUTPUT:
             return text
         half = MAX_OUTPUT // 2
-        middle = text[half : len(text) - half]
+        middle = text[half: len(text) - half]
         truncated_lines = middle.count("\n") + 1
         return f"{text[:half]}\n\n... [{truncated_lines} lines truncated] ...\n\n{text[-half:]}"
 
@@ -42,7 +50,8 @@ class DockerSandbox:
         timeout = max(1, min(timeout, MAX_TIMEOUT))
         timeout_s = timeout // 1000
         code, out = self._c.exec_run(
-            ["bash", "-c", f"timeout {timeout_s} bash -c {self.quote(command)}"],
+            ["bash", "-c",
+                f"timeout {timeout_s} bash -c {self.quote(command)}"],
             workdir=self.workdir,
             demux=False,
         )
@@ -56,7 +65,7 @@ class DockerSandbox:
     ) -> str:
         raw = self.read_file(file_path)
         all_lines = raw.decode("utf-8", errors="replace").splitlines()
-        selected = all_lines[offset : offset + limit]
+        selected = all_lines[offset: offset + limit]
         numbered = []
         for i, line in enumerate(selected):
             if len(line) > MAX_LINE_LENGTH:
@@ -86,3 +95,14 @@ class DockerSandbox:
             tar.addfile(info, io.BytesIO(content))
         tar_buf.seek(0)
         self._c.put_archive(os.path.dirname(path), tar_buf.getvalue())
+
+    def execute_tool(self, name: str, args: Optional[dict[str, Any]]):
+        res = self.func_callable_map[name](**args)
+
+    def execute_tool_with_timeout(self, name: str, args: Optional[dict[str, Any]]):
+        try:
+            return self.execute_tool(name, args)
+        except subprocess.TimeoutExpired:
+            return {"result": "error: command timed out"}
+        except Exception as e:
+            return {"result": f"error: {type(e).__name__}: {e}"}

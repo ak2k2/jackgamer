@@ -1,3 +1,5 @@
+from arcengine import FrameDataRaw
+
 from arc import MyArcSession
 from arc_agi import OperationMode
 from arc_agi import Arcade
@@ -5,10 +7,11 @@ import logging
 import numpy as np
 from dotenv import load_dotenv
 from PIL import Image
-from sandbox import DockerSandbox
+from sandbox import SandboxOrchestrator
 from google.genai import types
 from google import genai
 from tools import TOOL_LIST, SYSTEM_PROMPT
+
 load_dotenv()
 
 
@@ -65,19 +68,21 @@ def starting_state_prompt(obs: FrameDataRaw) -> str:
 
 
 class JackAgent:
-    def __init__(self):
+    def __init__(self, sbx: SandboxOrchestrator):
         self.client = genai.Client()
         self.model = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"][1]
         self.contents: list[types.Content] = []
+        self.sbx = sbx
         self.clear()
 
-    def clear(self, start_prompt):
-        self.contents = [
-            types.Content(role="user", parts=[types.Part(text=start_prompt)])
-        ]
+    def clear(self):
+        # self.contents = [
+        #     types.Content(role="user", parts=[types.Part(text=start_prompt)])
+        # ]
+        self.contents = []
 
-    def generate_response(self) -> types.GenerateContentResponse:
-        res = self.client.models.generate_content(
+    def generate_response(self):
+        res: types.GenerateContentResponse = self.client.models.generate_content(
             model=self.model,
             contents=self.contents,
             config=types.GenerateContentConfig(
@@ -85,6 +90,11 @@ class JackAgent:
                 tools=[types.Tool(function_declarations=TOOL_LIST)],
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(
                     disable=True),
+                # force a tool call: https://ai.google.dev/gemini-api/docs/function-calling?example=meeting#function_calling_modes
+                tool_config=types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(
+                        mode="ANY")  # AUTO to allow text
+                ),
                 temperature=1.0,
                 media_resolution=types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
                 candidate_count=1,
@@ -92,19 +102,21 @@ class JackAgent:
                 thinking_config=types.ThinkingConfig(thinking_level="high"),
             ),
         )
-        model_content = res.candidates[0].content
-        calls = [p for p in model_content.parts if p.function_call]
+        model_content: types.Content = res.candidates[0].content
+        calls: list[types.Part] = [
+            p for p in model_content.parts if p.function_call]
 
         if not calls:
             print("did not make a tool call")
             self.contents.append(model_content)
 
-        result_parts = []
+        result_parts: list[types.Part] = []
 
         for p in calls:
             print(f"made {len(calls)} tool calls")
             fc: types.FunctionCall = p.function_call
-            output: dict = execute_tool(fc.name, fc.args)
+            output: dict = self.sbx.execute_tool_with_timeout(
+                name=fc.name, args=fc.args)
 
             fr_kwargs = {
                 "name": fc.name,
@@ -137,10 +149,18 @@ def main():
         game_id=["ls20", "ft09"][0], arcade=arcade, scorecard_id=scorecard_id
     )
     print(arc_session.obs)
-    sandbox = DockerSandbox()
+    sbx = SandboxOrchestrator()
 
-    print(sandbox.bash("echo sandbox ready"))
-    print(sandbox.bash("python3 -c 'print(1+122)'"))
+    print(sbx.bash("echo sandbox ready"))
+    print(sbx.bash("python3 -c 'print(1+122)'"))
+
+    agent = JackAgent(sbx=sbx)
+
+    print(agent.contents)
+
+    agent.contents = []
+
+
 
 
 if __name__ == "__main__":
