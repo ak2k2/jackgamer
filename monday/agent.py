@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from arcengine import FrameDataRaw
+from arcengine import FrameDataRaw, GameAction
 
 from arc import MyArcSession
 from arc_agi import OperationMode
@@ -10,6 +10,7 @@ import numpy as np
 from dotenv import load_dotenv
 from PIL import Image
 from sandbox import SandboxOrchestrator
+import json
 from google.genai import types
 from google import genai
 from tools import TOOL_LIST, SYSTEM_PROMPT, TAKE_ACTION
@@ -76,6 +77,7 @@ class JackAgent:
         self.contents: list[types.Content] = []
         self.sbx: SandboxOrchestrator = sbx
         self.arc_session: MyArcSession = arc_session
+        self.replay_path = str(arc_session.env._recording_filename)
         self.clear()
 
     def clear(self):
@@ -87,7 +89,17 @@ class JackAgent:
             if name == TAKE_ACTION["name"]:
                 action_name: str = args.get("action")
                 self.arc_session.do_action_from_name(action_name=action_name)
-                return {"result": f"{self.arc_session.obs}"}
+                # sync state + replay to sandbox
+                self.sbx.write("/home/agent/state.json",
+                               self.arc_session.obs.model_dump_json())
+                self.sbx.write("/home/agent/replay.jsonl",
+                               open(self.replay_path).read())
+                return {"result": (
+                    f"state={self.arc_session.obs.state.name} score={self.arc_session.obs.levels_completed}/{self.arc_session.obs.win_levels} "
+                    f"available={[GameAction.from_id(a).name for a in self.arc_session.obs.available_actions]}\n"
+                    f"Current grid and full obs written to /home/agent/state.json. "
+                    f"Full action history in /home/agent/replay.jsonl."
+                )}
             else:
                 return {"result": self.sbx.func_callable_map[name](**args)}
         except Exception as e:
@@ -159,6 +171,7 @@ class JackAgent:
 def main():
     arcade = Arcade(operation_mode=OperationMode("normal"))
     scorecard_id: str = arcade.open_scorecard(tags=["jackagent"])
+
     arc_session = MyArcSession(
         game_id=["ls20", "ft09"][0], arcade=arcade, scorecard_id=scorecard_id
     )

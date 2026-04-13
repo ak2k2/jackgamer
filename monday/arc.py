@@ -8,7 +8,7 @@ load_dotenv()
 class MyArcSession:
     def __init__(self, game_id: str, arcade: Arcade, scorecard_id: str):
         self.env: EnvironmentWrapper = arcade.make(
-            game_id=game_id, scorecard_id=scorecard_id)
+            game_id=game_id, scorecard_id=scorecard_id, save_recording=True)
         self.last_obs: FrameDataRaw | None = None
         self.obs: FrameDataRaw | None = self.env.reset()
 

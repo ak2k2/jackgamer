@@ -18,7 +18,8 @@
       "Bash(curl -s \"https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/agent/agent-tool.go\")",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Read(//Users/armaan/.virtualenvs/arcagi/lib/python3.13/site-packages/arc_agi/**)",
-      "Read(//Users/armaan/.virtualenvs/arcagi/lib/python3.13/site-packages/arcengine/**)"
+      "Read(//Users/armaan/.virtualenvs/arcagi/lib/python3.13/site-packages/arcengine/**)",
+      "Bash(/Users/armaan/.virtualenvs/arcagi/bin/python3 -c ':*)"
     ]
   }
 }
