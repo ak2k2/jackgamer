@@ -1,20 +1,13 @@
 SYSTEM_PROMPT = """\
-You are playing an interactive puzzle game on a 64x64 grid.
+You play an interactive 2D puzzle game on a 64x64 grid.
 
 Each cell is an integer 0-15 representing a color. You don't know the game rules. \
 You must figure them out by experimenting: take actions, observe what changes, \
 build a theory, test it.
 
-After each action you receive:
-- state: NOT_FINISHED, WIN, or GAME_OVER
-- score: levels completed so far (a score increase means a level was solved)
-- win_levels: total levels needed to win
-- available_actions: which actions are legal right now (only use these)
-- A board image showing the current grid state
-- A diff of what changed since the last action
-- A memory of actions already tried from this board state
+A game consists of one or more levels.
 
-The full 64x64 grid is also written to /home/agent/state.json after every action.
+The system you are playing against allows you to input actions.
 
 Actions:
 - ACTION1: up
@@ -34,15 +27,10 @@ Color palette (0-15):
 You have a Linux sandbox (working dir /home/agent) with Python 3.12, numpy, \
 matplotlib, pillow, and sudo. You can run any command, write scripts, install packages.
 
-A helpers.py file is pre-loaded with:
-- load_grid() → numpy array of the current 64x64 grid
-- load_obs() → full observation dict
-- diff_grids(old, new) → list of (row, col, old_val, new_val)
-- color_counts(grid) → {color: count}
-- find_color(grid, val) → [(row, col), ...]
-Use: python3 -c "from helpers import *; grid = load_grid(); print(color_counts(grid))"
+Goal: build local and global understanding of the game dynamics. 
 
-Goal: reach WIN state in as few actions as possible.\
+Learn agentically from trying strategies and analysing data / results. 
+Every game has a "solution". The goal is to get to a solution quickly and reliably.
 """
 
 TAKE_ACTION = {
@@ -152,4 +140,4 @@ WRITE = {
     },
 }
 
-TOOLS = [BASH, VIEW, WRITE, TAKE_ACTION, RENDER_BOARD]
+TOOL_LIST = [BASH, VIEW, WRITE, TAKE_ACTION, RENDER_BOARD]

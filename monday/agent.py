@@ -6,7 +6,9 @@ import numpy as np
 from dotenv import load_dotenv
 from PIL import Image
 from sandbox import DockerSandbox
-
+from google.genai import types
+from google import genai
+from tools import TOOL_LIST, SYSTEM_PROMPT
 load_dotenv()
 
 
@@ -42,6 +44,90 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S"
 )
+
+
+def current_state_prompt(obs: FrameDataRaw) -> str:
+    return f"""Currently playing game: {obs.game_id}. On level #{obs.levels_completed} out of #{obs.win_levels}.
+
+"""
+
+
+def starting_state_prompt(obs: FrameDataRaw) -> str:
+    res = f"""Starting the following game: {obs.game_id}
+
+"""
+
+    return (
+        f"New game started. Initial state:\n{json.dumps(obs, indent=2)}\n\n"
+        f"The full grid is in /home/agent/state.json. "
+        f"Start by calling render_board to see the board, then take actions to explore."
+    )
+
+
+class JackAgent:
+    def __init__(self):
+        self.client = genai.Client()
+        self.model = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"][1]
+        self.contents: list[types.Content] = []
+        self.clear()
+
+    def clear(self, start_prompt):
+        self.contents = [
+            types.Content(role="user", parts=[types.Part(text=start_prompt)])
+        ]
+
+    def generate_response(self) -> types.GenerateContentResponse:
+        res = self.client.models.generate_content(
+            model=self.model,
+            contents=self.contents,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                tools=[types.Tool(function_declarations=TOOL_LIST)],
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    disable=True),
+                temperature=1.0,
+                media_resolution=types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+                candidate_count=1,
+                stop_sequences=[],
+                thinking_config=types.ThinkingConfig(thinking_level="high"),
+            ),
+        )
+        model_content = res.candidates[0].content
+        calls = [p for p in model_content.parts if p.function_call]
+
+        if not calls:
+            print("did not make a tool call")
+            self.contents.append(model_content)
+
+        result_parts = []
+
+        for p in calls:
+            print(f"made {len(calls)} tool calls")
+            fc: types.FunctionCall = p.function_call
+            output: dict = execute_tool(fc.name, fc.args)
+
+            fr_kwargs = {
+                "name": fc.name,
+                "response": {"result": output["result"]},
+                "id": fc.id,
+            }
+            if "_bytes" in output:
+                fr_kwargs["parts"] = [
+                    types.FunctionResponsePart(
+                        inline_data=types.FunctionResponseBlob(
+                            mime_type=output["_mime"],
+                            display_name="board.png",
+                            data=output["_bytes"],
+                        )
+                    )
+                ]
+
+            result_parts.append(
+                types.Part(
+                    function_response=types.FunctionResponse(**fr_kwargs))
+            )
+
+        self.contents.append(types.Content(role="user", parts=result_parts))
 
 
 def main():
