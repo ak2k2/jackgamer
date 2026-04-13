@@ -79,18 +79,17 @@ class JackAgent:
         self.clear()
 
     def clear(self):
-        # self.contents = [
-        #     types.Content(role="user", parts=[types.Part(text=start_prompt)])
-        # ]
         self.contents = []
 
-    def execute_tool(self, name: str, args: Optional[dict[str, Any]] = {}):
+    def execute_tool(self, name: str, args: Optional[dict[str, Any]] = None):
         try:
+            args = args or {}
             if name == TAKE_ACTION["name"]:
-                print("take action called, stopping test")
-                raise
+                action_name: str = args.get("action")
+                self.arc_session.do_action_from_name(action_name=action_name)
+                return {"result": f"{self.arc_session.obs}"}
             else:
-                return {"result": self.sbx.func_callable_map[name](**(args))}
+                return {"result": self.sbx.func_callable_map[name](**args)}
         except Exception as e:
             return {"result": f"error: {type(e).__name__}: {e}"}
 
@@ -119,9 +118,11 @@ class JackAgent:
         calls: list[types.Part] = [
             p for p in model_content.parts if p.function_call]
 
+        self.contents.append(model_content)
+
         if not calls:
             print("did not make a tool call")
-            self.contents.append(model_content)
+            return
 
         result_parts: list[types.Part] = []
 

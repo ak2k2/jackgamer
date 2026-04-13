@@ -34,6 +34,11 @@ class SandboxOrchestrator:
         self._c.restart(timeout=5)
         self._c.reload()
 
+    def _resolve(self, path: str) -> str:
+        if not os.path.isabs(path):
+            return os.path.join(self.workdir, path)
+        return path
+
     # TOOLS
     def quote(self, s: str) -> str:
         return "'" + s.replace("'", "'\\''") + "'"
@@ -63,6 +68,7 @@ class SandboxOrchestrator:
     def view(
         self, file_path: str, offset: int = 0, limit: int = DEFAULT_READ_LIMIT
     ) -> str:
+        file_path = self._resolve(file_path)
         raw = self.read_file(file_path)
         all_lines = raw.decode("utf-8", errors="replace").splitlines()
         selected = all_lines[offset: offset + limit]
@@ -77,6 +83,7 @@ class SandboxOrchestrator:
         return result
 
     def write(self, file_path: str, content: str) -> str:
+        file_path = self._resolve(file_path)
         self.bash(f"mkdir -p {self.quote(os.path.dirname(file_path))}")
         self.write_file(file_path, content.encode("utf-8"))
         return f"File successfully written: {file_path}"
