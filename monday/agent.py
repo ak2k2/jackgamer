@@ -5,6 +5,7 @@ import logging
 import numpy as np
 from dotenv import load_dotenv
 from PIL import Image
+from sandbox import DockerSandbox
 
 load_dotenv()
 
@@ -50,6 +51,10 @@ def main():
         game_id=["ls20", "ft09"][0], arcade=arcade, scorecard_id=scorecard_id
     )
     print(arc_session.obs)
+    sandbox = DockerSandbox()
+
+    print(sandbox.bash("echo sandbox ready"))
+    print(sandbox.bash("python3 -c 'print(1+122)'"))
 
 
 if __name__ == "__main__":

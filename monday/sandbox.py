@@ -10,11 +10,11 @@ DEFAULT_READ_LIMIT = 2000
 MAX_LINE_LENGTH = 2000
 
 
-class Sandbox:
+class DockerSandbox:
     """Docker Sandbox Orchestrator"""
 
     def __init__(self, name: str = "sandbox", workdir: str = "/home/agent"):
-        self.name = name
+        self.name = name # FKEY: scorecard id
         self.workdir = workdir
         self._client = docker.from_env()
         self._client.ping()
