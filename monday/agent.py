@@ -183,16 +183,15 @@ def find_color(grid, val):
                 tools=[types.Tool(function_declarations=TOOL_LIST)],
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(
                     disable=True),
-                # force a tool call: https://ai.google.dev/gemini-api/docs/function-calling?example=meeting#function_calling_modes
                 tool_config=types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(
-                        mode="ANY")  # AUTO to allow text
+                        mode="AUTO")
                 ),
                 temperature=1.0,
                 media_resolution=types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
                 candidate_count=1,
                 stop_sequences=[],
-                thinking_config=types.ThinkingConfig(thinking_level="low"),
+                thinking_config=types.ThinkingConfig(thinking_level="high"),
             ),
         )
         model_content: types.Content = res.candidates[0].content

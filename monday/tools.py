@@ -39,6 +39,13 @@ Example: python3 -c "from helpers import *; render_board()"
 Use view_image to see any image you create. You cannot see files \
 unless you pass them through view_image.
 
+Your files persist between turns. Build reusable scripts in /home/agent/ — \
+don't rewrite analysis code, improve existing scripts and rerun them. \
+Run `ls` to see what you've already built before writing new code.
+
+Full action history is in /home/agent/replay.jsonl (one JSON event per action, no grid data). \
+Current grid is always in /home/agent/state.json.
+
 Goal: build local and global understanding of the game dynamics.
 
 Learn agentically from trying strategies and analysing data / results.
