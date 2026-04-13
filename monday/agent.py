@@ -13,7 +13,8 @@ from sandbox import SandboxOrchestrator
 import json
 from google.genai import types
 from google import genai
-from tools import TOOL_LIST, SYSTEM_PROMPT, TAKE_ACTION
+import mimetypes
+from tools import TOOL_LIST, SYSTEM_PROMPT, TAKE_ACTION, VIEW_IMAGE
 
 load_dotenv()
 
@@ -96,7 +97,8 @@ class JackAgent:
                     if not (0 <= int(x) <= 63 and 0 <= int(y) <= 63):
                         return {"result": f"error: coordinates out of range: x={x}, y={y} (must be 0-63)"}
                     data = {"x": int(x), "y": int(y)}
-                self.arc_session.do_action_from_name(action_name=action_name, data=data)
+                self.arc_session.do_action_from_name(
+                    action_name=action_name, data=data)
                 # sync state + replay to sandbox
                 obs = self.arc_session.obs
                 state = obs.model_dump(mode="json")
@@ -110,6 +112,12 @@ class JackAgent:
                     f"Current grid and full obs written to /home/agent/state.json. "
                     f"Full action history in /home/agent/replay.jsonl."
                 )}
+            elif name == VIEW_IMAGE["name"]:
+                file_path = args.get("file_path", "")
+                raw = self.sbx.read_file(self.sbx._resolve(file_path))
+                mime = mimetypes.guess_type(
+                    file_path)[0] or "application/octet-stream"
+                return {"result": f"Displaying {file_path}", "_bytes": raw, "_mime": mime}
             else:
                 return {"result": self.sbx.func_callable_map[name](**args)}
         except Exception as e:
@@ -153,7 +161,8 @@ class JackAgent:
 
             output: dict = self.execute_tool(
                 name=fc.name, args=fc.args)
-            executed.append({"name": fc.name, "args": dict(fc.args), "result": output["result"]})
+            executed.append({"name": fc.name, "args": dict(
+                fc.args), "result": output["result"]})
 
             fr_kwargs = {
                 "name": fc.name,
@@ -165,7 +174,7 @@ class JackAgent:
                     types.FunctionResponsePart(
                         inline_data=types.FunctionResponseBlob(
                             mime_type=output["_mime"],
-                            display_name="board.png",
+                            display_name=output.get("_name", "image.png"),
                             data=output["_bytes"],
                         )
                     )

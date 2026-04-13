@@ -132,4 +132,22 @@ WRITE = {
     },
 }
 
-TOOL_LIST = [BASH, VIEW, WRITE, TAKE_ACTION]
+VIEW_IMAGE = {
+    "name": "view_image",
+    "description": (
+        "View an image from the sandbox. The image is added to your visual context "
+        "so you can see and analyze it. Use this after saving plots or renderings."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "Path to an image file in the sandbox (png, jpg, gif, webp).",
+            },
+        },
+        "required": ["file_path"],
+    },
+}
+
+TOOL_LIST = [BASH, VIEW, WRITE, TAKE_ACTION, VIEW_IMAGE]
