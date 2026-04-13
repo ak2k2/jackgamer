@@ -70,14 +70,6 @@ TAKE_ACTION = {
     },
 }
 
-RENDER_BOARD = {
-    "name": "render_board",
-    "description": "Render the current game board as a PNG image. No arguments needed.",
-    "parameters": {
-        "type": "object",
-        "properties": {},
-    },
-}
 
 BASH = {
     "name": "bash",
@@ -140,4 +132,4 @@ WRITE = {
     },
 }
 
-TOOL_LIST = [BASH, VIEW, WRITE, TAKE_ACTION, RENDER_BOARD]
+TOOL_LIST = [BASH, VIEW, WRITE, TAKE_ACTION]

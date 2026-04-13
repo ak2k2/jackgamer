@@ -1,3 +1,5 @@
+from typing import Any, Optional
+
 from arcengine import FrameDataRaw
 
 from arc import MyArcSession
@@ -10,7 +12,7 @@ from PIL import Image
 from sandbox import SandboxOrchestrator
 from google.genai import types
 from google import genai
-from tools import TOOL_LIST, SYSTEM_PROMPT
+from tools import TOOL_LIST, SYSTEM_PROMPT, TAKE_ACTION
 
 load_dotenv()
 
@@ -68,11 +70,12 @@ def starting_state_prompt(obs: FrameDataRaw) -> str:
 
 
 class JackAgent:
-    def __init__(self, sbx: SandboxOrchestrator):
+    def __init__(self, sbx: SandboxOrchestrator, arc_session: MyArcSession):
         self.client = genai.Client()
         self.model = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"][1]
         self.contents: list[types.Content] = []
-        self.sbx = sbx
+        self.sbx: SandboxOrchestrator = sbx
+        self.arc_session: MyArcSession = arc_session
         self.clear()
 
     def clear(self):
@@ -80,6 +83,15 @@ class JackAgent:
         #     types.Content(role="user", parts=[types.Part(text=start_prompt)])
         # ]
         self.contents = []
+
+    def execute_tool(self, name: str, args: Optional[dict[str, Any]] = {}):
+        try:
+            if name == TAKE_ACTION["name"]:
+                print("take action called, stopping test")
+                raise
+            else:
+                return {"result": self.sbx.func_callable_map[name](**(args))}
+            return {"result": f"error: {type(e).__name__}: {e}"}
 
     def generate_response(self):
         res: types.GenerateContentResponse = self.client.models.generate_content(
@@ -115,7 +127,8 @@ class JackAgent:
         for p in calls:
             print(f"made {len(calls)} tool calls")
             fc: types.FunctionCall = p.function_call
-            output: dict = self.sbx.execute_tool(
+
+            output: dict = self.execute_tool(
                 name=fc.name, args=fc.args)
 
             fr_kwargs = {
@@ -154,7 +167,7 @@ def main():
     print(sbx.bash("echo sandbox ready"))
     print(sbx.bash("python3 -c 'print(1+122)'"))
 
-    agent = JackAgent(sbx=sbx)
+    agent = JackAgent(sbx=sbx, arc_session=arc_session)
 
     print(agent.contents)
 
