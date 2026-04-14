@@ -17,22 +17,40 @@ class SandboxOrchestrator:
     """Tool call harness in a container"""
 
     def __init__(self, name: str = "sandbox", workdir: str = "/home/agent"):
-        self.name = name  # FKEY: scorecard id
+        self.name = name
         self.workdir = workdir
         self._client = docker.from_env()
         self._client.ping()
-        self._c = self._client.containers.get(name)
-        self._c.reload()
-        self.reset()
+        self._image = self._client.images.get("jackgamer-sandbox")
+        self._c = self._create_container()
         self.func_callable_map = {
             "bash": self.bash,
             "view": self.view,
             "write": self.write,
+            "edit": self.edit,
         }
 
+    def _create_container(self):
+        """Create a fresh container from the image."""
+        # remove old container if it exists
+        try:
+            old = self._client.containers.get(self.name)
+            old.remove(force=True)
+        except docker.errors.NotFound:
+            pass
+        c = self._client.containers.run(
+            self._image,
+            name=self.name,
+            detach=True,
+            mem_limit="4g",
+            nano_cpus=2_000_000_000,  # 2 CPUs
+            security_opt=["no-new-privileges:true"],
+        )
+        return c
+
     def reset(self):
-        self._c.restart(timeout=5)
-        self._c.reload()
+        """Nuke container, start fresh from image."""
+        self._c = self._create_container()
 
     def _resolve(self, path: str) -> str:
         if not os.path.isabs(path):
@@ -68,7 +86,6 @@ class SandboxOrchestrator:
     def view(
         self, file_path: str, offset: int = 0, limit: int = DEFAULT_READ_LIMIT
     ) -> str:
-        file_path = self._resolve(file_path)
         raw = self.read_file(file_path)
         all_lines = raw.decode("utf-8", errors="replace").splitlines()
         selected = all_lines[offset: offset + limit]
@@ -76,14 +93,28 @@ class SandboxOrchestrator:
         for i, line in enumerate(selected):
             if len(line) > MAX_LINE_LENGTH:
                 line = line[:MAX_LINE_LENGTH] + "..."
-            numbered.append(f"{i + offset + 1:6}|{line}")
-        result = "<file>\n" + "\n".join(numbered) + "\n</file>"
+            numbered.append(f"{i + offset + 1}\t{line}")
+        result = "\n".join(numbered)
         if offset + limit < len(all_lines):
             result += f"\n\n(File has more lines. Use 'offset' parameter to read beyond line {offset + len(selected)})"
         return result
 
+    def edit(self, file_path: str, old_string: str, new_string: str, replace_all: bool = False) -> str:
+        raw = self.read_file(file_path).decode("utf-8", errors="replace")
+        count = raw.count(old_string)
+        if count == 0:
+            return f"error: old_string not found in {file_path}"
+        if count > 1 and not replace_all:
+            return f"error: old_string has {count} matches. Use replace_all=true or provide more context."
+        if replace_all:
+            new = raw.replace(old_string, new_string)
+        else:
+            new = raw.replace(old_string, new_string, 1)
+        self.write_file(file_path, new.encode("utf-8"))
+        replaced = count if replace_all else 1
+        return f"Replaced {replaced} occurrence(s) in {file_path}"
+
     def write(self, file_path: str, content: str) -> str:
-        file_path = self._resolve(file_path)
         self.bash(f"mkdir -p {self.quote(os.path.dirname(file_path))}")
         self.write_file(file_path, content.encode("utf-8"))
         return f"File successfully written: {file_path}"

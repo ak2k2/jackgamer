@@ -24,8 +24,10 @@ Color palette (0-15):
 6=magenta 7=light-magenta 8=red 9=blue 10=light-blue 11=yellow \
 12=orange 13=maroon 14=green 15=purple
 
-You have a Linux sandbox (working dir /home/agent) with Python 3.12, numpy, \
-matplotlib, pillow, and sudo. You can run any command, write scripts, install packages.
+You have a Linux sandbox (working dir /home/agent) with Python 3.12 and sudo. \
+Pre-installed: numpy, scipy, pandas, matplotlib, pillow, scikit-image, \
+scikit-learn, opencv (cv2), networkx, sympy, z3-solver. \
+You can run any command, write scripts, install more packages.
 
 A helpers.py file is pre-loaded with:
 - load_grid() → numpy array of the current 64x64 grid
@@ -39,9 +41,8 @@ Example: python3 -c "from helpers import *; render_board()"
 Use view_image to see any image you create. You cannot see files \
 unless you pass them through view_image.
 
-Your files persist between turns. Build reusable scripts in /home/agent/ — \
-don't rewrite analysis code, improve existing scripts and rerun them. \
-Run `ls` to see what you've already built before writing new code.
+Your files persist between turns. Use edit to modify existing files, \
+write only for new files. View a file before editing it.
 
 Full action history is in /home/agent/replay.jsonl (one JSON event per action, no grid data). \
 Current grid is always in /home/agent/state.json.
@@ -98,7 +99,7 @@ BASH = {
         "properties": {
             "command": {
                 "type": "string",
-                "description": "The command to execute",
+                "description": "The command to execute.",
             },
             "timeout": {
                 "type": "number",
@@ -117,7 +118,7 @@ VIEW = {
         "properties": {
             "file_path": {
                 "type": "string",
-                "description": "The path to the file to read",
+                "description": "Absolute path to the file.",
             },
             "offset": {
                 "type": "integer",
@@ -140,7 +141,7 @@ WRITE = {
         "properties": {
             "file_path": {
                 "type": "string",
-                "description": "The path to the file to write",
+                "description": "Absolute path to the file.",
             },
             "content": {
                 "type": "string",
@@ -162,11 +163,41 @@ VIEW_IMAGE = {
         "properties": {
             "file_path": {
                 "type": "string",
-                "description": "Path to an image file in the sandbox (png, jpg, gif, webp).",
+                "description": "Path to an image file (png, jpg, gif, webp).",
             },
         },
         "required": ["file_path"],
     },
 }
 
-TOOL_LIST = [BASH, VIEW, WRITE, TAKE_ACTION, VIEW_IMAGE]
+EDIT = {
+    "name": "edit",
+    "description": (
+        "Perform exact string replacement in a file. "
+        "old_string must be unique in the file unless replace_all is true."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "Absolute path to the file.",
+            },
+            "old_string": {
+                "type": "string",
+                "description": "The text to replace.",
+            },
+            "new_string": {
+                "type": "string",
+                "description": "The replacement text.",
+            },
+            "replace_all": {
+                "type": "boolean",
+                "description": "Replace all occurrences (default false).",
+            },
+        },
+        "required": ["file_path", "old_string", "new_string"],
+    },
+}
+
+TOOL_LIST = [BASH, VIEW, WRITE, EDIT, TAKE_ACTION, VIEW_IMAGE]
