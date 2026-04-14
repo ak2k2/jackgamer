@@ -25,7 +25,6 @@ class SandboxOrchestrator:
         self._c = self._create_container()
         self.func_callable_map = {
             "bash": self.bash,
-            "view": self.view,
             "write": self.write,
             "edit": self.edit,
         }

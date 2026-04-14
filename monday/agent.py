@@ -14,7 +14,7 @@ import json
 from google.genai import types
 from google import genai
 import mimetypes
-from tools import TOOL_LIST, SYSTEM_PROMPT, TAKE_ACTION, VIEW_IMAGE
+from tools import TOOL_LIST, SYSTEM_PROMPT, TAKE_ACTION
 
 load_dotenv()
 
@@ -134,12 +134,13 @@ def find_color(grid, val):
                     f"Current grid and full obs written to /home/agent/state.json. "
                     f"Full action history in /home/agent/replay.jsonl."
                 )}
-            elif name == VIEW_IMAGE["name"]:
+            elif name == "view":
                 file_path = args.get("file_path", "")
-                raw = self.sbx.read_file(self.sbx._resolve(file_path))
-                mime = mimetypes.guess_type(
-                    file_path)[0] or "application/octet-stream"
-                return {"result": f"Displaying {file_path}", "_bytes": raw, "_mime": mime}
+                mime = mimetypes.guess_type(file_path)[0] or ""
+                if mime.startswith("image/"):
+                    raw = self.sbx.read_file(file_path)
+                    return {"result": f"Displaying {file_path}", "_bytes": raw, "_mime": mime}
+                return {"result": self.sbx.view(**args)}
             else:
                 return {"result": self.sbx.func_callable_map[name](**args)}
         except Exception as e:

@@ -38,8 +38,8 @@ A helpers.py file is pre-loaded with:
 - find_color(grid, val) → [(row, col), ...]
 Example: python3 -c "from helpers import *; render_board()"
 
-Use view_image to see any image you create. You cannot see files \
-unless you pass them through view_image.
+Use view to see any image you create. You cannot see images \
+unless you pass them through view.
 
 Your files persist between turns. Use edit to modify existing files, \
 write only for new files. View a file before editing it.
@@ -112,7 +112,7 @@ BASH = {
 
 VIEW = {
     "name": "view",
-    "description": "Read a text file with line numbers.",
+    "description": "Read a file. Text files shown with line numbers. Images displayed visually.",
     "parameters": {
         "type": "object",
         "properties": {
@@ -152,24 +152,6 @@ WRITE = {
     },
 }
 
-VIEW_IMAGE = {
-    "name": "view_image",
-    "description": (
-        "View an image from the sandbox. The image is added to your visual context "
-        "so you can see and analyze it. Use this after saving plots or renderings."
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "file_path": {
-                "type": "string",
-                "description": "Path to an image file (png, jpg, gif, webp).",
-            },
-        },
-        "required": ["file_path"],
-    },
-}
-
 EDIT = {
     "name": "edit",
     "description": (
@@ -200,4 +182,4 @@ EDIT = {
     },
 }
 
-TOOL_LIST = [BASH, VIEW, WRITE, EDIT, TAKE_ACTION, VIEW_IMAGE]
+TOOL_LIST = [BASH, VIEW, WRITE, EDIT, TAKE_ACTION]
