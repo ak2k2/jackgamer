@@ -11,6 +11,7 @@ class MyArcSession:
             game_id=game_id, scorecard_id=scorecard_id, save_recording=True, include_frame_data=False)
         self.last_obs: FrameDataRaw | None = None
         self.obs: FrameDataRaw | None = self.env.reset()
+        self.has_reset_this_level = False
 
     def reset(self):
         self.last_obs = None
@@ -24,6 +25,10 @@ class MyArcSession:
             return
         self.last_obs = self.obs
         self.obs = self.env.step(action, data=data)
+
+    def tick_state(self):
+        if self.obs.state:
+            pass
 
     def do_action_from_name(self, action_name: str, data: dict | None = None):
         ga = GameAction.from_name(action_name)

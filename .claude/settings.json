@@ -20,7 +20,9 @@
       "Read(//Users/armaan/.virtualenvs/arcagi/lib/python3.13/site-packages/arc_agi/**)",
       "Read(//Users/armaan/.virtualenvs/arcagi/lib/python3.13/site-packages/arcengine/**)",
       "Bash(/Users/armaan/.virtualenvs/arcagi/bin/python3 -c ':*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Read(//Users/armaan/.virtualenvs/arcagi/lib/python3.13/site-packages/**)",
+      "WebFetch(domain:ai.google.dev)"
     ]
   }
 }

@@ -45,11 +45,15 @@ def starting_state_prompt(obs: FrameDataRaw) -> str:
 class JackAgent:
     def __init__(self, sbx: SandboxOrchestrator, arc_session: MyArcSession):
         self.client = genai.Client()
-        self.model = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"][1]
+        self.model = ["gemini-3.1-flash-lite-preview",
+                      "gemini-3-flash-preview", "gemini-3.1-pro-preview"][2]
         self.contents: list[types.Content] = []
         self.sbx: SandboxOrchestrator = sbx
         self.arc_session: MyArcSession = arc_session
         self.replay_path = str(arc_session.env._recording_filename)
+        self.usage = {"prompt_tokens": 0, "output_tokens": 0,
+                      "thinking_tokens": 0, "total_prompt_tokens": 0,
+                      "image_prompt_tokens": 0, "image_output_tokens": 0}
         self._seed_helpers()
         self._sync_state()
         self.clear()
@@ -114,6 +118,10 @@ def find_color(grid, val):
             args = args or {}
             if name == TAKE_ACTION["name"]:
                 action_name: str = args.get("action")
+                available = [GameAction.from_id(
+                    a).name for a in self.arc_session.obs.available_actions]
+                if action_name != "RESET" and action_name not in available:
+                    return {"result": f"error: {action_name} not available. available: {available}"}
                 data = None
                 if action_name == "ACTION6":
                     x, y = args.get("x"), args.get("y")
@@ -134,6 +142,24 @@ def find_color(grid, val):
                     f"Current grid and full obs written to /home/agent/state.json. "
                     f"Full action history in /home/agent/replay.jsonl."
                 )}
+            elif name == "generate_image":
+                prompt = args.get("prompt", "")
+                res = self.client.models.generate_content(
+                    model="gemini-3.1-flash-image-preview",
+                    contents=[prompt],
+                )
+                im = res.usage_metadata
+                if im:
+                    self.usage["image_prompt_tokens"] += im.prompt_token_count or 0
+                    self.usage["image_output_tokens"] += im.candidates_token_count or 0
+                for part in res.parts:
+                    if part.inline_data:
+                        return {
+                            "result": f"Generated image for: {prompt}",
+                            "_bytes": part.inline_data.data,
+                            "_mime": part.inline_data.mime_type,
+                        }
+                return {"result": "no image returned"}
             elif name == "view":
                 file_path = args.get("file_path", "")
                 mime = mimetypes.guess_type(file_path)[0] or ""
@@ -157,15 +183,22 @@ def find_color(grid, val):
                     disable=True),
                 tool_config=types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(
-                        mode="AUTO")
+                        mode="AUTO") # change to ANY to force function calls
                 ),
-                temperature=1.0,
+                temperature=1.2,
                 media_resolution=types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
                 candidate_count=1,
                 stop_sequences=[],
                 thinking_config=types.ThinkingConfig(thinking_level="high"),
             ),
         )
+        m = res.usage_metadata
+        if m:
+            self.usage["prompt_tokens"] = m.prompt_token_count or 0
+            self.usage["total_prompt_tokens"] += m.prompt_token_count or 0
+            self.usage["output_tokens"] += m.candidates_token_count or 0
+            self.usage["thinking_tokens"] += m.thoughts_token_count or 0
+
         model_content: types.Content = res.candidates[0].content
         calls: list[types.Part] = [
             p for p in model_content.parts if p.function_call]
