@@ -182,22 +182,4 @@ EDIT = {
     },
 }
 
-GENERATE_IMAGE = {
-    "name": "generate_image",
-    "description": (
-        "Generate an image from a text prompt using Gemini Nano Banana. "
-        "The generated image is returned inline so you can see it on your next turn."
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "prompt": {
-                "type": "string",
-                "description": "Text description of the image to generate.",
-            },
-        },
-        "required": ["prompt"],
-    },
-}
-
-TOOL_LIST = [BASH, VIEW, WRITE, EDIT, TAKE_ACTION, GENERATE_IMAGE]
+TOOL_LIST = [BASH, VIEW, WRITE, EDIT, TAKE_ACTION]

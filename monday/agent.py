@@ -10,6 +10,7 @@ import numpy as np
 from dotenv import load_dotenv
 from PIL import Image
 from sandbox import SandboxOrchestrator
+import io
 import json
 from google.genai import types
 from google import genai
@@ -113,6 +114,40 @@ def find_color(grid, val):
     def clear(self):
         self.contents = []
 
+    # --- standalone image annotation (Nano Banana, separate from main context) ---
+    PALETTE_RGB = np.array([
+        [0xFF, 0xFF, 0xFF], [0xCC, 0xCC, 0xCC], [0x99, 0x99, 0x99], [0x66, 0x66, 0x66],
+        [0x33, 0x33, 0x33], [0x00, 0x00, 0x00], [0xE5, 0x3A, 0xA3], [0xFF, 0x7B, 0xCC],
+        [0xF9, 0x3C, 0x31], [0x1E, 0x93, 0xFF], [0x88, 0xD8, 0xF1], [0xFF, 0xDC, 0x00],
+        [0xFF, 0x85, 0x1B], [0x92, 0x12, 0x31], [0x4F, 0xCC, 0x30], [0xA3, 0x56, 0xD6],
+    ], dtype=np.uint8)
+
+    def _frame_to_png(self, frame: np.ndarray, size: int = 512) -> bytes:
+        rgb = self.PALETTE_RGB[np.clip(np.asarray(frame, dtype=np.uint8), 0, 15)]
+        img = Image.fromarray(rgb).resize((size, size), Image.NEAREST)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
+
+    def annotate(self, prompt: str, frame: Optional[np.ndarray] = None) -> Optional[Image.Image]:
+        """Call Nano Banana 2 to edit the current (or given) board frame per the prompt.
+        Returns a PIL Image or None if the model refused. Tracks tokens in self.usage."""
+        if frame is None:
+            frame = self.arc_session.obs.frame[-1]
+        png_bytes = self._frame_to_png(frame)
+        res = self.client.models.generate_content(
+            model="gemini-3.1-flash-image-preview",
+            contents=[prompt, Image.open(io.BytesIO(png_bytes))],
+        )
+        m = res.usage_metadata
+        if m:
+            self.usage["image_prompt_tokens"] += m.prompt_token_count or 0
+            self.usage["image_output_tokens"] += m.candidates_token_count or 0
+        for part in res.parts:
+            if part.inline_data and part.inline_data.data:
+                return Image.open(io.BytesIO(part.inline_data.data))
+        return None
+
     def execute_tool(self, name: str, args: Optional[dict[str, Any]] = None):
         try:
             args = args or {}
@@ -142,24 +177,6 @@ def find_color(grid, val):
                     f"Current grid and full obs written to /home/agent/state.json. "
                     f"Full action history in /home/agent/replay.jsonl."
                 )}
-            elif name == "generate_image":
-                prompt = args.get("prompt", "")
-                res = self.client.models.generate_content(
-                    model="gemini-3.1-flash-image-preview",
-                    contents=[prompt],
-                )
-                im = res.usage_metadata
-                if im:
-                    self.usage["image_prompt_tokens"] += im.prompt_token_count or 0
-                    self.usage["image_output_tokens"] += im.candidates_token_count or 0
-                for part in res.parts:
-                    if part.inline_data:
-                        return {
-                            "result": f"Generated image for: {prompt}",
-                            "_bytes": part.inline_data.data,
-                            "_mime": part.inline_data.mime_type,
-                        }
-                return {"result": "no image returned"}
             elif name == "view":
                 file_path = args.get("file_path", "")
                 mime = mimetypes.guess_type(file_path)[0] or ""
